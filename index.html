@@ -5,7 +5,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#121a38">
 <meta name="description" content="고양이, 새, 쥐가 겨루는 번개 배구 게임. 혼자, 둘이, 친구와 온라인으로 즐겨요.">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}[hidden]{display:none!important}img{max-width:100%}</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}[hidden]{display:none!important}img{max-width:100%}
+/* ---- phone play view: landscape, full screen, controls along the bottom ---- */
+#game{position:relative;display:flex;flex-direction:column;gap:12px}
+.fsbar{display:none}
+body.playing{overflow:hidden;touch-action:none}
+body.playing #game{position:fixed;left:0;top:0;z-index:50;background:#0b1029;display:flex;align-items:center;justify-content:center;gap:0;transform-origin:0 0}
+body.playing .stage{border-radius:0;box-shadow:none;width:100%}
+body.playing .pad{display:flex;position:absolute;left:0;right:0;bottom:0;justify-content:space-between;align-items:flex-end;gap:12px;
+  padding:0 max(14px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));pointer-events:none;z-index:2}
+body.playing .pad div{display:flex;gap:10px;pointer-events:auto}
+body.playing .pad button{width:clamp(56px,9vw,76px);height:clamp(52px,8.5vw,70px);font-size:clamp(14px,2.4vw,19px);
+  background:rgba(18,26,60,.55);border:2px solid rgba(255,255,255,.28);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+body.playing .pad button.hit{background:rgba(255,227,107,.88);border-color:rgba(255,255,255,.5);width:clamp(66px,11vw,90px)}
+body.playing .pad button.hit.skill{background:rgba(255,154,92,.9);width:clamp(58px,9.5vw,78px)}
+body.playing .fsbar{display:flex;position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:max(10px,env(safe-area-inset-left,0px));gap:8px;z-index:3}
+.fsbar button{font-family:var(--display);font-size:15px;height:36px;min-width:44px;padding:0 12px;border-radius:999px;border:2px solid rgba(255,255,255,.3);background:rgba(18,26,60,.6);color:var(--ink);cursor:pointer}
+</style>
 <title>동물친구 번개배구</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
@@ -41,12 +57,13 @@ canvas{display:block;width:100%;height:100%}
 .btn.alt{background:var(--gloom);color:#fff;box-shadow:0 4px 0 #4e2c94}
 .btn:active{transform:translateY(3px);box-shadow:none}
 .btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
-.pad{display:none;justify-content:space-between;gap:10px}
-.pad div{display:flex;gap:10px}
-.pad button{font-family:var(--display);font-size:20px;width:68px;height:60px;border-radius:16px;border:0;background:var(--panel);color:var(--ink);touch-action:none}
-.pad button.skill{background:#ff9a5c;width:70px}
-.pad button.hit{background:var(--spark);color:#2a1d00;width:86px}
-@media (pointer:coarse){.pad{display:flex}}
+.pad{display:none;grid-template-columns:1fr 1fr 1fr 1.25fr 1fr;gap:8px;width:100%}
+.pad div{display:contents}
+.pad button{font-family:var(--display);font-size:clamp(14px,4.2vw,20px);min-width:0;width:auto;height:60px;padding:0 4px;border-radius:16px;border:0;background:var(--panel);color:var(--ink);touch-action:none;-webkit-user-select:none;user-select:none;white-space:nowrap}
+.pad button.hit{background:var(--spark);color:#2a1d00}
+.pad button.hit.skill{background:#ff9a5c;color:#2a1d00}
+.pad button:active{filter:brightness(1.15)}
+@media (pointer:coarse){.pad{display:grid}}
 .colors{display:flex;flex-direction:column;gap:10px;background:var(--panel);border-radius:14px;padding:12px 14px}
 .colors h2{font-family:var(--display);font-weight:400;font-size:17px;margin:0;color:var(--ink)}
 .crow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -84,6 +101,8 @@ canvas{display:block;width:100%;height:100%}
 
 
 <div class="wrap">
+  <div id="game">
+  <div class="fsbar"><button id="fsExit" aria-label="나가기">✕ 나가기</button><button id="fsPause" aria-label="일시정지">❚❚</button></div>
   <div class="stage">
     <canvas id="c" width="960" height="600" aria-label="배구 경기장"></canvas>
     <div class="overlay" id="menu">
@@ -99,6 +118,7 @@ canvas{display:block;width:100%;height:100%}
   <div class="pad" id="pad">
     <div><button data-k="left" aria-label="왼쪽">◀</button><button data-k="right" aria-label="오른쪽">▶</button></div>
     <div><button data-k="jump">점프</button><button data-k="hit" class="hit">스파이크</button><button data-k="skill" class="hit skill">특기</button></div>
+  </div>
   </div>
   <div class="colors" aria-label="캐릭터 꾸미기">
     <div class="chead"><h2>캐릭터 꾸미기</h2>
@@ -163,7 +183,7 @@ document.querySelectorAll('#pad button').forEach(b=>{
   b.addEventListener('pointerdown',e=>{e.preventDefault();tk[k]=true;b.setPointerCapture(e.pointerId)});
   ['pointerup','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>tk[k]=false));
 });
-function begin(m){mode=m;document.getElementById('who2').textContent=m===1?'상대 (컴퓨터)':m===3?'친구 (온라인)':'2P';newMatch();state='play';menu.hidden=true;last=performance.now()}
+function begin(m){enterPlay();mode=m;document.getElementById('fsPause').hidden=m===3;document.getElementById('who2').textContent=m===1?'상대 (컴퓨터)':m===3?'친구 (온라인)':'2P';newMatch();state='play';menu.hidden=true;last=performance.now()}
 document.getElementById('b1').onclick=()=>begin(1);
 document.getElementById('b2').onclick=()=>begin(2);
 document.getElementById('b3').onclick=()=>onlineMenu();
@@ -736,10 +756,12 @@ let ON=null,remoteIn={},savedLocal=null,lastSent=0,lastInKey='';
 function myIdx(){return ON&&ON.role==='guest'?1:0}
 const CODE_CH='abcdefghjkmnpqrstuvwxyz23456789';
 function mainMenu(){
+  exitPlay();
   state='menu';
   overlay('동물친구 번개배구','누구와 겨룰까요?',[['혼자 하기',()=>begin(1)],['둘이 하기',()=>begin(2),true],['친구와 온라인',onlineMenu,true]]);
 }
 function onlineMenu(){
+  enterPlay();
   if(typeof Peer==='undefined'){overlay('온라인 대전을 쓸 수 없어요','연결 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.',[['돌아가기',mainMenu]]);return}
   menu.innerHTML=`<h1>친구와 온라인</h1><p><b>바로 대전</b>을 누르면 먼저 들어온 사람이 방을 만들고, 다음에 들어온 사람이 그 방으로 들어가요. 둘만 하고 싶으면 <b>비밀 방</b>을 쓰세요.</p>
     <div class="row"><button class="btn" id="qm">바로 대전</button></div>
@@ -919,7 +941,7 @@ function onlineTick(dt){
   }else{
     const st=ON.lastSt;
     if(st){
-      if(!ON.started){ON.started=true;mode=3;document.getElementById('who2').textContent='친구 (온라인)';newMatch();menu.hidden=true}
+      if(!ON.started){ON.started=true;enterPlay();document.getElementById('fsPause').hidden=true;mode=3;document.getElementById('who2').textContent='친구 (온라인)';newMatch();menu.hidden=true}
       applySnapshot(st);
       if(st.ph==='over'&&state!=='over'){state='over';const w=M.score[0]>M.score[1]?0:1;
         overlay(w===1?'승리!':'아쉬워요!',`최종 점수 ${M.score[0]} : ${M.score[1]} · 방장이 다시 하기를 누르면 새 경기가 시작돼요.`,[['나가기',()=>leaveOnline(true),true]])}
@@ -930,6 +952,41 @@ function onlineTick(dt){
   }
 }
 
+
+// ---- phone play view ----
+const gameEl=document.getElementById('game'),stageEl=document.querySelector('.stage');
+const isPhone=matchMedia('(pointer:coarse)').matches;
+let playing=false;
+function enterPlay(){
+  if(!isPhone||playing)return;
+  playing=true;document.body.classList.add('playing');
+  try{
+    const req=gameEl.requestFullscreen||gameEl.webkitRequestFullscreen;
+    const pr=req&&req.call(gameEl,{navigationUI:'hide'});
+    const lock=()=>{try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}catch(e){}};
+    if(pr&&pr.then)pr.then(lock,()=>{});else lock();
+  }catch(e){}
+  layoutPlay();
+}
+function exitPlay(){
+  if(!playing)return;
+  playing=false;document.body.classList.remove('playing');
+  try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else if(document.webkitFullscreenElement)document.webkitExitFullscreen()}catch(e){}
+  try{screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock()}catch(e){}
+  layoutPlay();
+}
+// when the phone stays upright (no orientation lock, e.g. iPhone), turn the play view sideways with CSS
+function layoutPlay(){
+  if(!playing){gameEl.style.cssText='';stageEl.style.width='';return}
+  const vw=innerWidth,vh=innerHeight,rot=vh>vw,w=rot?vh:vw,h=rot?vw:vh;
+  gameEl.style.width=w+'px';gameEl.style.height=h+'px';
+  gameEl.style.transform=rot?`translate(${vw}px,0) rotate(90deg)`:'none';
+  stageEl.style.width=Math.min(w,h*1.6)+'px';
+}
+addEventListener('resize',layoutPlay);
+addEventListener('orientationchange',()=>setTimeout(layoutPlay,250));
+document.getElementById('fsPause').onclick=()=>{if(mode!==3&&(state==='play'||state==='pause'))pause()};
+document.getElementById('fsExit').onclick=()=>{if(typeof ON!=='undefined'&&ON)leaveOnline(true);else mainMenu()};
 let last=performance.now();
 newMatch();
 function frame(now){
