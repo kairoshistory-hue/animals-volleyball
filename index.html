@@ -12,15 +12,26 @@
 body.playing{overflow:hidden;touch-action:none}
 body.playing #game{position:fixed;left:0;top:0;z-index:50;background:#0b1029;display:flex;align-items:center;justify-content:center;gap:0;transform-origin:0 0}
 body.playing .stage{border-radius:0;box-shadow:none;width:100%}
-body.playing .pad{display:flex;position:absolute;left:0;right:0;bottom:0;justify-content:space-between;align-items:flex-end;gap:12px;
+body.playing .pad{display:flex;position:absolute;left:auto;right:0;bottom:0;justify-content:flex-end;align-items:flex-end;gap:12px;
   padding:0 max(14px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));pointer-events:none;z-index:2}
 body.playing .pad div{display:flex;gap:10px;pointer-events:auto}
 body.playing .pad button{width:clamp(56px,9vw,76px);height:clamp(52px,8.5vw,70px);font-size:clamp(14px,2.4vw,19px);
   background:rgba(18,26,60,.55);border:2px solid rgba(255,255,255,.28);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-body.playing .pad button.hit{background:rgba(255,227,107,.88);border-color:rgba(255,255,255,.5);width:clamp(66px,11vw,90px)}
-body.playing .pad button.hit.skill{background:rgba(255,154,92,.9);width:clamp(58px,9.5vw,78px)}
+body.playing .pad button.hit{background:rgba(255,227,107,.88);border-color:rgba(255,255,255,.5);width:clamp(78px,13vw,104px);height:clamp(64px,11vw,88px);border-radius:50%;font-size:clamp(15px,2.6vw,20px)}
+body.playing .pad button.hit.skill{background:rgba(255,154,92,.9);width:clamp(78px,13vw,104px)}
 body.playing .fsbar{display:flex;position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:max(10px,env(safe-area-inset-left,0px));gap:8px;z-index:3}
 .fsbar button{font-family:var(--display);font-size:15px;height:36px;min-width:44px;padding:0 12px;border-radius:999px;border:2px solid rgba(255,255,255,.3);background:rgba(18,26,60,.6);color:var(--ink);cursor:pointer}
+
+/* ---- swipe area: slide left/right to move, flick up to jump ---- */
+#tz{display:none;position:absolute;inset:0;z-index:1;touch-action:none}
+.overlay{z-index:2}
+@media (pointer:coarse){#tz{display:block}}
+.tz-ring,.tz-knob{position:absolute;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%)}
+.tz-ring{width:110px;height:110px;border:3px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08)}
+.tz-knob{width:52px;height:52px;background:rgba(255,227,107,.75);box-shadow:0 0 18px rgba(255,227,107,.6)}
+.tz-hint{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);pointer-events:none;font-family:var(--display);
+  font-size:clamp(15px,3vw,22px);color:#fff;background:rgba(14,18,44,.55);border-radius:999px;padding:8px 18px;white-space:nowrap;transition:opacity .6s}
+.tz-hint.gone{opacity:0}
 </style>
 <title>동물친구 번개배구</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,7 +68,7 @@ canvas{display:block;width:100%;height:100%}
 .btn.alt{background:var(--gloom);color:#fff;box-shadow:0 4px 0 #4e2c94}
 .btn:active{transform:translateY(3px);box-shadow:none}
 .btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
-.pad{display:none;grid-template-columns:1fr 1fr 1fr 1.25fr 1fr;gap:8px;width:100%}
+.pad{display:none;grid-template-columns:1fr 1fr;gap:10px;width:100%}
 .pad div{display:contents}
 .pad button{font-family:var(--display);font-size:clamp(14px,4.2vw,20px);min-width:0;width:auto;height:60px;padding:0 4px;border-radius:16px;border:0;background:var(--panel);color:var(--ink);touch-action:none;-webkit-user-select:none;user-select:none;white-space:nowrap}
 .pad button.hit{background:var(--spark);color:#2a1d00}
@@ -104,6 +115,7 @@ canvas{display:block;width:100%;height:100%}
   <div id="game">
   <div class="fsbar"><button id="fsExit" aria-label="나가기">✕ 나가기</button><button id="fsPause" aria-label="일시정지">❚❚</button></div>
   <div class="stage">
+    <div id="tz" aria-hidden="true"><div class="tz-ring" hidden></div><div class="tz-knob" hidden></div><div class="tz-hint">화면을 좌우로 밀어 이동 · 위로 밀면 점프</div></div>
     <canvas id="c" width="960" height="600" aria-label="배구 경기장"></canvas>
     <div class="overlay" id="menu">
       <h1>동물친구 번개배구</h1>
@@ -116,8 +128,7 @@ canvas{display:block;width:100%;height:100%}
     </div>
   </div>
   <div class="pad" id="pad">
-    <div><button data-k="left" aria-label="왼쪽">◀</button><button data-k="right" aria-label="오른쪽">▶</button></div>
-    <div><button data-k="jump">점프</button><button data-k="hit" class="hit">스파이크</button><button data-k="skill" class="hit skill">특기</button></div>
+    <div><button data-k="hit" class="hit">스파이크</button><button data-k="skill" class="hit skill">필살기</button></div>
   </div>
   </div>
   <div class="colors" aria-label="캐릭터 꾸미기">
@@ -131,10 +142,11 @@ canvas{display:block;width:100%;height:100%}
     <div class="crow" data-p="1"><span class="who" id="who2">상대 (컴퓨터)</span></div>
   </div>
   <div class="legend">
-    <span><b>1P</b>A·D 이동 · W 점프 · F 스파이크 · S 특기</span>
-    <span><b>혼자 하기</b>방향키 + 스페이스, ↓ 특기도 돼요</span>
-    <span><b>2P</b>← → 이동 · ↑ 점프 · Enter 스파이크 · ↓ 특기</span>
-    <span><b>특기</b>에너지가 가득 차면 쓸 수 있어요. 고양이 얼음 · 쥐 갉아먹기 · 새 돌풍</span>
+    <span><b>1P</b>A·D 이동 · W 점프 · F 스파이크 · S 필살기</span>
+    <span><b>혼자 하기</b>방향키 + 스페이스, ↓ 필살기도 돼요</span>
+    <span><b>2P</b>← → 이동 · ↑ 점프 · Enter 스파이크 · ↓ 필살기</span>
+    <span><b>휴대폰</b>화면을 좌우로 밀어 이동 · 위로 밀어 점프 · 버튼으로 스파이크와 필살기</span>
+    <span><b>필살기</b>에너지가 가득 차면 쓸 수 있어요. 고양이 얼음 · 쥐 갉아먹기 · 새 돌풍</span>
     <span><b>P</b>일시정지</span>
   </div>
 </div>
@@ -183,7 +195,7 @@ document.querySelectorAll('#pad button').forEach(b=>{
   b.addEventListener('pointerdown',e=>{e.preventDefault();tk[k]=true;b.setPointerCapture(e.pointerId)});
   ['pointerup','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>tk[k]=false));
 });
-function begin(m){enterPlay();mode=m;document.getElementById('fsPause').hidden=m===3;document.getElementById('who2').textContent=m===1?'상대 (컴퓨터)':m===3?'친구 (온라인)':'2P';newMatch();state='play';menu.hidden=true;last=performance.now()}
+function begin(m){enterPlay();window.showSwipeHint&&showSwipeHint();mode=m;document.getElementById('fsPause').hidden=m===3;document.getElementById('who2').textContent=m===1?'상대 (컴퓨터)':m===3?'친구 (온라인)':'2P';newMatch();state='play';menu.hidden=true;last=performance.now()}
 document.getElementById('b1').onclick=()=>begin(1);
 document.getElementById('b2').onclick=()=>begin(2);
 document.getElementById('b3').onclick=()=>onlineMenu();
@@ -987,6 +999,35 @@ addEventListener('resize',layoutPlay);
 addEventListener('orientationchange',()=>setTimeout(layoutPlay,250));
 document.getElementById('fsPause').onclick=()=>{if(mode!==3&&(state==='play'||state==='pause'))pause()};
 document.getElementById('fsExit').onclick=()=>{if(typeof ON!=='undefined'&&ON)leaveOnline(true);else mainMenu()};
+
+// ---- swipe controls: drag sideways to move, flick up to jump ----
+(()=>{
+  const tz=document.getElementById('tz'),ring=tz.querySelector('.tz-ring'),knob=tz.querySelector('.tz-knob'),hint=tz.querySelector('.tz-hint');
+  let id=null,ox=0,oy=0,jumped=false,jumpT=0;
+  const rotated=()=>playing&&/rotate/.test(gameEl.style.transform||'');
+  // pointer position in the stage's own (unrotated) pixels
+  function local(e){const r=stageEl.getBoundingClientRect();
+    return rotated()?{x:e.clientY-r.top,y:r.right-e.clientX}:{x:e.clientX-r.left,y:e.clientY-r.top}}
+  function show(el,x,y){el.hidden=false;el.style.left=x+'px';el.style.top=y+'px'}
+  tz.addEventListener('pointerdown',e=>{
+    if(id!==null)return;id=e.pointerId;try{tz.setPointerCapture(id)}catch(_){}
+    const p=local(e);ox=p.x;oy=p.y;jumped=false;show(ring,ox,oy);show(knob,ox,oy);hint.classList.add('gone');e.preventDefault();
+  });
+  tz.addEventListener('pointermove',e=>{
+    if(e.pointerId!==id)return;
+    const p=local(e);let dx=p.x-ox;const up=oy-p.y;
+    // keep the anchor within reach so changing direction is instant
+    if(dx>60){ox=p.x-60;dx=60}else if(dx<-60){ox=p.x+60;dx=-60}
+    tk.left=dx<-12;tk.right=dx>12;
+    if(up>34&&!jumped){jumped=true;tk.jump=true;clearTimeout(jumpT);jumpT=setTimeout(()=>{tk.jump=false},160)}
+    if(up<12)jumped=false;
+    if(up<-30)oy=p.y-30; // finger slid down: move the anchor so the next flick up jumps
+    show(ring,ox,oy);show(knob,ox+dx,oy-Math.max(-30,Math.min(50,up)));
+  });
+  const end=e=>{if(e.pointerId!==id)return;id=null;tk.left=tk.right=false;ring.hidden=knob.hidden=true};
+  tz.addEventListener('pointerup',end);tz.addEventListener('pointercancel',end);
+  window.showSwipeHint=()=>hint.classList.remove('gone');
+})();
 let last=performance.now();
 newMatch();
 function frame(now){
