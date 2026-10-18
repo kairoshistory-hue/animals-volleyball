@@ -17,8 +17,10 @@ body.playing .pad{display:flex;position:absolute;left:auto;right:0;bottom:0;just
 body.playing .pad div{display:flex;gap:10px;pointer-events:auto}
 body.playing .pad button{width:clamp(56px,9vw,76px);height:clamp(52px,8.5vw,70px);font-size:clamp(14px,2.4vw,19px);
   background:rgba(18,26,60,.55);border:2px solid rgba(255,255,255,.28);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-body.playing .pad button.hit{background:rgba(255,227,107,.88);border-color:rgba(255,255,255,.5);width:clamp(78px,13vw,104px);height:clamp(64px,11vw,88px);border-radius:50%;font-size:clamp(15px,2.6vw,20px)}
-body.playing .pad button.hit.skill{background:rgba(255,154,92,.9);width:clamp(78px,13vw,104px)}
+body.playing .pad div{align-items:flex-end}
+body.playing .pad button.hit{background:rgba(255,227,107,1);border-color:#fff;width:clamp(58px,9.5vw,72px);height:clamp(58px,9.5vw,72px);padding:0;border-radius:50%;font-size:clamp(22px,3.6vw,30px);opacity:.4}
+body.playing .pad button.hit:active{opacity:.75}
+body.playing .pad button.hit.skill{background:rgba(255,154,92,1);width:clamp(44px,7vw,54px);height:clamp(44px,7vw,54px);font-size:clamp(18px,2.8vw,23px);margin-bottom:clamp(30px,6vw,46px)}
 body.playing .fsbar{display:flex;position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:max(10px,env(safe-area-inset-left,0px));gap:8px;z-index:3}
 .fsbar button{font-family:var(--display);font-size:15px;height:36px;min-width:44px;padding:0 12px;border-radius:999px;border:2px solid rgba(255,255,255,.3);background:rgba(18,26,60,.6);color:var(--ink);cursor:pointer}
 
@@ -128,7 +130,7 @@ canvas{display:block;width:100%;height:100%}
     </div>
   </div>
   <div class="pad" id="pad">
-    <div><button data-k="hit" class="hit">스파이크</button><button data-k="skill" class="hit skill">필살기</button></div>
+    <div><button data-k="hit" class="hit" aria-label="스파이크">S</button><button data-k="skill" class="hit skill" aria-label="필살기">K</button></div>
   </div>
   </div>
   <div class="colors" aria-label="캐릭터 꾸미기">
@@ -220,7 +222,7 @@ function controls(i){
       r:keys['d']||(solo&&keys['arrowright'])||tk.right,
       j:keys['w']||(solo&&(keys['arrowup']))||tk.jump,
       h:keys['f']||(solo&&(keys[' ']||keys['enter']))||tk.hit||tapOn('hit'),
-      s:keys['s']||(solo&&keys['arrowdown'])||tk.skill||tapOn('skill')};
+      s:keys['s']||keys['k']||(solo&&keys['arrowdown'])||tk.skill||tapOn('skill')};
   }
   if(mode===3)return{l:!!remoteIn.l,r:!!remoteIn.r,j:!!remoteIn.j,h:!!remoteIn.h,s:!!remoteIn.s};
   if(mode===2)return{l:keys['arrowleft'],r:keys['arrowright'],j:keys['arrowup'],h:keys['enter'],s:keys['arrowdown']};
@@ -287,7 +289,7 @@ function step(dt){
   });
   if(M.wait>0){M.wait-=dt;if(M.wait<=0&&M.pending!=null){const w=M.pending;M.pending=null;serve(w)}return}
   const b=M.ball;
-  M.p.forEach(p=>p.en=Math.min(100,p.en+2.5*dt));
+  M.p.forEach(p=>p.en=Math.min(100,p.en+0.9*dt));
   if(b.punct!=null){b.punctT-=dt;if(b.punctT<=0)b.punct=null}
   if(b.fire>0)b.fire-=dt;
   if(M.gust){M.gust.t-=dt;if(M.gust.t>0){b.vx+=M.gust.dir*0.25*f}else M.gust=null}
@@ -325,7 +327,7 @@ function step(dt){
           if(dir*b.vx<4)b.vx=dir*8;}
         else{b.vx=dir*20;b.vy=-1.5;b.fire=1.6;M.shake=12;M.flash=0.6;burst(b.x,b.y,'#ff9a5c',26);M.msg='냥펀치!';M.msgT=1}
         p.armed=0;
-      }else p.en=Math.min(100,p.en+10);
+      }else p.en=Math.min(100,p.en+5);
       const v=Math.hypot(b.vx,b.vy);if(v>21){b.vx*=21/v;b.vy*=21/v}
       p.cd=0.12;
     }
@@ -333,7 +335,7 @@ function step(dt){
   if(b.y+BR>=GROUND){
     const winner=b.x<NET_X?1:0;
     M.score[winner]++;burst(b.x,GROUND,'#f3d9a0',24);M.shake=8;
-    M.p[1-winner].en=Math.min(100,M.p[1-winner].en+15);M.p[winner].react={m:'smile',t:1.5};M.p[1-winner].react={m:'sad',t:1.5};
+    M.p[1-winner].en=Math.min(100,M.p[1-winner].en+8);M.p[winner].react={m:'smile',t:1.5};M.p[1-winner].react={m:'sad',t:1.5};
     M.msg=`${nick(winner)} 득점!`;M.msgT=1.2;
     if(M.score[winner]>=M.win){return finish(winner)}
     b.y=GROUND-BR;b.vy=0;b.vx=0;
@@ -766,7 +768,7 @@ function hud(){
     g.fillStyle=full?`rgba(255,${180+Math.sin(now*8)*50|0},90,1)`:'#ffe36b';
     g.beginPath();g.roundRect?g.roundRect(x,y,Math.max(4,120*p.en/100),10,5):g.rect(x,y,120*p.en/100,10);g.fill();
     g.font='14px "Gowun Dodum", sans-serif';g.fillStyle='rgba(255,255,255,.85)';
-    const key=mode===3?(i===myIdx()?'S / ↓':''):i===0?(mode===1?'S / ↓':'S'):(mode===1?'':'↓');
+    const key=isPhone&&mode!==2&&i===myIdx()?'K':mode===3?(i===myIdx()?'S / ↓':''):i===0?(mode===1?'S / ↓':'S'):(mode===1?'':'↓');
     const label=p.armed>0?`${SKILL[spec[i]]} 준비 완료`:full?`${SKILL[spec[i]]} 가능${key?' ('+key+')':''}`:SKILL[spec[i]];
     g.fillText(label,x+60,y+14);
   });
